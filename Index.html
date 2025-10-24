@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Quiz: Enologia I</title>
+<style>
+body { font-family: Arial, sans-serif; background:#f5f0eb; color:#3a1f0b; margin:0; padding:0;}
+header { background:#6b0f1a; color:#fff; text-align:center; padding:20px; font-size:2em;}
+.container { max-width:900px; margin:30px auto; padding:20px; background:#fff; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.2);}
+button { background:#6b0f1a; color:#fff; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; margin-top:10px;}
+button:hover { background:#8c1a27; }
+.hidden { display:none; }
+.correct { color:green; font-weight:bold; }
+.wrong { color:red; font-weight:bold; }
+input { padding:10px; width:90%; margin-bottom:10px; border-radius:5px; border:1px solid #ccc;}
+</style>
+</head>
+<body>
+<header>Quiz: Enologia I</header>
+<div class="container">
+
+<div id="inicio">
+<h2>Bem-vindo ao Quiz de Enologia</h2>
+<p>Digite seu nome e CPF para iniciar:</p>
+<input type="text" id="nome" placeholder="Nome" required><br>
+<input type="text" id="cpf" placeholder="CPF (somente números)" required><br>
+<button onclick="iniciarQuiz()">Iniciar Quiz</button>
+</div>
+
+<div id="quiz" class="hidden">
+<h3 id="pergunta"></h3>
+<div id="opcoes"></div>
+<div id="feedback"></div>
+<button id="proxima" class="hidden" onclick="proximaPergunta()">👉 Próxima Pergunta</button>
+</div>
+
+<div id="fim" class="hidden">
+<h2>Fim do Quiz!</h2>
+<p id="resultado"></p>
+<p>Cada teste é uma taça de aprendizado: deguste a jornada, celebre a sua evolução e prove que o seu conhecimento está na safra certa! Boa sorte. 🍷</p>
+</div>
+
+<audio id="somAcerto"><source src="https://freesound.org/data/previews/523/523658_3505850-lq.mp3" type="audio/mpeg"></audio>
+<audio id="somErro"><source src="https://freesound.org/data/previews/523/523660_3505850-lq.mp3" type="audio/mpeg"></audio>
+
+<script>
+// ---------------------- VARIÁVEIS ----------------------
+let perguntas = [];
+let perguntaAtual = 0;
+let totalAcertos = 0;
+let totalErros = 0;
+let nomeDigitado = '';
+let cpfDigitado = '';
+const webAppURL = "COLE_AQUI_A_URL_DO_WEB_APP"; // substitua com sua URL do Apps Script
+
+// ---------------------- BANCO DE PERGUNTAS ----------------------
+// Aqui você pode colar as 50 perguntas completas em formato:
+// {nivel:'facil/medio/dificil', pergunta:'Texto', opcoes:['a','b','c','d'], correta:0, explicacao:'Texto explicativo'}
+perguntas = [
+  {nivel:'facil', pergunta:'Qual é a parte que protege a uva?', opcoes:['Semente','Polpa','Casca','Cacho'], correta:2, explicacao:'A casca protege a uva e contém compostos fenólicos importantes.'},
+  {nivel:'facil', pergunta:'Qual é o açúcar principal do mosto?', opcoes:['Frutose','Sacarose','Glicose','Lactose'], correta:0, explicacao:'A frutose é um dos açúcares presentes no mosto.'},
+  {nivel:'facil', pergunta:'O que é um cacho de uva?', opcoes:['Um tipo de uva','Um conjunto de bagas','O caule da videira','A semente da uva'], correta:1, explicacao:'O cacho é o conjunto de bagas da uva.'},
+  // ... continue aqui até completar 50 perguntas ...
+];
+
+// Embaralhar perguntas
+perguntas = perguntas.sort(() => Math.random() - 0.5);
+
+// ---------------------- FUNÇÕES ----------------------
+function iniciarQuiz() {
+  nomeDigitado = document.getElementById("nome").value.trim();
+  cpfDigitado = document.getElementById("cpf").value.trim();
+  if(nomeDigitado === '' || cpfDigitado === '' || cpfDigitado.length !== 11 || isNaN(cpfDigitado)){
+    alert("Digite um nome válido e CPF com 11 números.");
+    return;
+  }
+  // Verificar se CPF já respondeu
+  if(localStorage.getItem("cpf_" + cpfDigitado)){
+    alert("Este CPF já respondeu ao quiz.");
+    return;
+  }
+  document.getElementById("inicio").classList.add("hidden");
+  document.getElementById("quiz").classList.remove("hidden");
+  mostrarPergunta();
+}
+
+function mostrarPergunta(){
+  document.getElementById("feedback").innerHTML='';
+  document.getElementById("proxima").classList.add("hidden");
+  let p = perguntas[perguntaAtual];
+  document.getElementById("pergunta").innerText = (perguntaAtual+1)+'. '+p.pergunta;
+  let html='';
+  p.opcoes.forEach((op,i)=>{
+    html+=`<button onclick="verificarResposta(${i})">${op}</button><br>`;
+  });
+  document.getElementById("opcoes").innerHTML = html;
+}
+
+function verificarResposta(indice){
+  let p = perguntas[perguntaAtual];
+  if(indice === p.correta){
+    totalAcertos++;
+    document.getElementById("feedback").innerHTML = `<p class="correct">✅ Correto!</p>`;
+    document.getElementById("somAcerto").play();
+  } else {
+    totalErros++;
+    document.getElementById("feedback").innerHTML = `<p class="wrong">❌ Errado! Resposta correta: ${p.opcoes[p.correta]}<br>${p.explicacao}</p>`;
+    document.getElementById("somErro").play();
+  }
+  document.getElementById("proxima").classList.remove("hidden");
+}
+
+function proximaPergunta(){
+  perguntaAtual++;
+  if(perguntaAtual < perguntas.length){
+    mostrarPergunta();
+  } else {
+    finalizarQuiz();
+  }
+}
+
+function finalizarQuiz(){
+  document.getElementById("quiz").classList.add("hidden");
+  document.getElementById("fim").classList.remove("hidden");
+  document.getElementById("resultado").innerHTML=`Nome: ${nomeDigitado}<br>CPF: ${cpfDigitado}<br>Acertos: ${totalAcertos}<br>Erros: ${totalErros}`;
+  localStorage.setItem("cpf_"+cpfDigitado,true);
+  enviarResultados(nomeDigitado, cpfDigitado, totalAcertos, totalErros);
+}
+
+// ---------------------- ENVIO PARA PLANILHA ----------------------
+function enviarResultados(nome, cpf, acertos, erros){
+  fetch(webAppURL + `?nome=${nome}&cpf=${cpf}&acertos=${acertos}&erros=${erros}`)
+  .then(resp=>resp.text())
+  .then(data=>console.log(data))
+  .catch(err=>console.error(err));
+}
+
+</script>
+</body>
+</html>
